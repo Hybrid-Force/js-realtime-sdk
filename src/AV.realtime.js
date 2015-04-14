@@ -165,7 +165,7 @@ void function(win) {
                     };
                     cache.ec.on('ack', fun);
                 }
-                engine.send(options, callback);
+                engine.send(options);
                 return this;
             },
             log: function(argument, callback) {
