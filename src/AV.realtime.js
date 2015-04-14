@@ -1096,6 +1096,96 @@ void function(win) {
                 cache.ec.on('session-query-result', fun);
                 engine.querySession(options);
                 return this;
+            },
+
+            send: function(arguments, callback) {
+
+                var options = arguments.options || {};
+                var data = arguments.data;
+                var cid = arguments.cid;
+
+                if (!(cid && data)) {
+                    throw('Cid or data not given.')
+                }
+                options.cid = arguments.cid;
+                options.serialId = engine.getSerialId();
+
+                // 如果 type 存在，则发送多媒体格式
+                if (options.type) {
+                    options.data = engine.setMediaMsg(options.type, data);
+                } else {
+                    options.data = data;
+                }
+
+                // 是否需要消息回执
+                if (options.receipt) {
+                    options.receipt = 1;
+                }
+
+                // 如果是暂态消息，则不需回调，服务器也不会返回回调
+                if (!options.transient) {
+                    var fun = function(data) {
+                        if (data.i === options.serialId) {
+                            if (callback) {
+                                callback(data);
+                            }
+                            cache.ec.off('ack', fun);
+                        }
+                    };
+                    cache.ec.on('ack', fun);
+                }
+                engine.send(options);
+                return this;
+            },
+
+            join: function(arguments, callback) {
+                var member = arguments.member;
+                var cid = arguments.cid;
+                if (!(member && cid)) {
+                    throw('Member or cid not given');
+                }
+
+                var options = {
+                    cid: cid,
+                    members: [member],
+                    serialId: engine.getSerialId()
+                };
+                engine.convAdd(options);
+                var fun = function(data) {
+                    if (data.i === options.serialId) {
+                        if (callback) {
+                            callback(data);
+                        }
+                        cache.ec.off('conv-added', fun);
+                    }
+                };
+                cache.ec.on('conv-added', fun);
+                return this;
+            },
+
+            leave: function(arguments, callback) {
+                var member = arguments.member;
+                var cid = arguments.cid;
+                if (!(member && cid)) {
+                    throw('Member or cid not given');
+                }
+
+                var options = {
+                    cid: cid,
+                    members: [member],
+                    serialId: engine.getSerialId()
+                };
+                engine.convRemove(options);
+                var fun = function(data) {
+                    if (data.i === options.serialId) {
+                        if (callback) {
+                            callback(data);
+                        }
+                        cache.ec.off('conv-removed', fun);
+                    }
+                };
+                cache.ec.on('conv-removed', fun);
+                return this;
             }
         };
     };
